@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>9 Combinaisons RMI/TCP/UDP</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Syne:wght@700;800&display=swap');
+:root{
+  --bg:#06060f;--bg2:#0c0c1a;--bg3:#101020;--border:#1c1c30;
+  --tcp:#00c9e0;--udp:#ffb830;--rmi:#39ff8f;
+  --accent:#7c4dff;--text:#c8d0e8;--muted:#40425a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(124,77,255,.025) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(124,77,255,.025) 1px,transparent 1px);
+  background-size:36px 36px;pointer-events:none;z-index:0}
+
+.wrap{position:relative;z-index:1;max-width:1160px;margin:0 auto;padding:24px 18px}
+
+/* HEADER */
+header{text-align:center;padding:36px 0 28px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.tag{display:inline-block;font-size:9px;letter-spacing:5px;color:var(--accent);
+  text-transform:uppercase;padding:3px 14px;border:1px solid var(--accent);
+  border-radius:20px;margin-bottom:12px}
+h1{font-family:'Syne',sans-serif;font-size:clamp(22px,5vw,38px);font-weight:800;
+  color:#fff;letter-spacing:-2px}
+h1 span{color:var(--accent)}
+header p{color:var(--muted);font-size:11px;margin-top:8px}
+
+/* COMBO SELECTOR */
+.combo-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.combo-btn{
+  padding:8px 14px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px;cursor:pointer;font-family:'JetBrains Mono',monospace;
+  font-size:11px;font-weight:700;color:var(--muted);transition:all .15s;
+  display:flex;align-items:center;gap:6px
+}
+.combo-btn:hover{border-color:var(--accent);color:var(--text)}
+.combo-btn.active{background:rgba(124,77,255,.15);border-color:var(--accent);color:#fff}
+.pill{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:800;letter-spacing:1px}
+.pill.TCP{background:rgba(0,201,224,.2);color:var(--tcp);border:1px solid rgba(0,201,224,.4)}
+.pill.UDP{background:rgba(255,184,48,.2);color:var(--udp);border:1px solid rgba(255,184,48,.4)}
+.pill.RMI{background:rgba(57,255,143,.2);color:var(--rmi);border:1px solid rgba(57,255,143,.4)}
+
+/* DIAGRAM */
+.diagram-box{
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:20px;margin-bottom:18px;display:flex;align-items:center;
+  justify-content:center;gap:0;flex-wrap:wrap
+}
+.proc-box{
+  background:var(--bg3);border:2px solid var(--accent);border-radius:10px;
+  padding:10px 22px;font-family:'Syne',sans-serif;font-weight:800;
+  font-size:18px;color:#c0b0ff
+}
+.arrow-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;padding:0 8px}
+.arrow-line{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700}
+.arrow-sym{font-size:18px;color:var(--muted)}
+
+/* FILE TABS */
+.file-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg);
+  border-radius:12px 12px 0 0;overflow:hidden}
+.file-tab{padding:10px 18px;background:transparent;border:none;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;
+  color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.file-tab.ap{color:var(--accent);border-bottom-color:var(--accent);background:var(--bg2)}
+.file-tab.ai{color:var(--rmi);border-bottom-color:var(--rmi);background:var(--bg2)}
+.file-tab:hover:not(.ap):not(.ai){color:var(--text)}
+.copy-btn{margin-left:auto;padding:10px 16px;background:transparent;border:none;
+  cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;
+  font-weight:700;color:var(--muted);white-space:nowrap;transition:color .2s}
+.copy-btn:hover{color:var(--text)}
+.copy-btn.ok{color:var(--rmi)}
+pre.code{
+  margin:0;padding:22px;font-size:11.5px;line-height:1.8;color:#a0aac8;
+  overflow-x:auto;max-height:540px;overflow-y:auto;
+  background:var(--bg2);border:1px solid var(--border);border-top:none;
+  border-radius:0 0 12px 12px;white-space:pre;tab-size:4
+}
+
+/* PORTS INFO */
+.ports-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.port-pill{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+  padding:8px 14px;font-size:10px;color:var(--muted);line-height:1.7}
+.port-pill strong{display:block;font-size:9px;letter-spacing:2px;margin-bottom:4px}
+.port-pill strong.TCP{color:var(--tcp)}
+.port-pill strong.UDP{color:var(--udp)}
+.port-pill strong.RMI{color:var(--rmi)}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="tag">Systèmes Répartis — Master 1 RSD</div>
+  <h1>9 Combinaisons<br><span>Envoi / Retour</span></h1>
+  <p>P1 (client) → P2 (serveur) → retour P2 → P1 · Calcul : S = N × 2</p>
+</header>
+
+<!-- PORTS REFERENCE -->
+<div class="ports-row">
+  <div class="port-pill"><strong class="TCP">TCP</strong>P1 écoute : 2001<br>P2 écoute : 2002</div>
+  <div class="port-pill"><strong class="UDP">UDP</strong>P1 écoute : 2011<br>P2 écoute : 2012</div>
+  <div class="port-pill"><strong class="RMI">RMI REGISTRY</strong>P1 registry : 1097<br>P2 registry : 1096</div>
+</div>
+
+<!-- COMBO SELECTOR -->
+<div class="combo-bar" id="combo-bar"></div>
+
+<!-- DIAGRAM -->
+<div class="diagram-box" id="diagram"></div>
+
+<!-- FILE TABS + CODE -->
+<div style="border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+  <div class="file-tabs" id="file-tabs">
+    <button class="copy-btn" id="copy-btn" onclick="copyActive()">📋 Copier</button>
+  </div>
+  <pre class="code" id="code-out"></pre>
+</div>
+
+</div>
+<script>
+// ══════════════════════════════════════════════════════════════
+//  CODE TEMPLATES
+// ══════════════════════════════════════════════════════════════
+
+const COMBOS = [
+  {id:'RMI_RMI', send:'RMI', ret:'RMI'},
+  {id:'TCP_TCP', send:'TCP', ret:'TCP'},
+  {id:'UDP_UDP', send:'UDP', ret:'UDP'},
+  {id:'RMI_TCP', send:'RMI', ret:'TCP'},
+  {id:'RMI_UDP', send:'RMI', ret:'UDP'},
+  {id:'TCP_RMI', send:'TCP', ret:'RMI'},
+  {id:'TCP_UDP', send:'TCP', ret:'UDP'},
+  {id:'UDP_TCP', send:'UDP', ret:'TCP'},
+  {id:'UDP_RMI', send:'UDP', ret:'RMI'},
+];
+
+// ── All 9 code sets ──────────────────────────────────────────
+const FILES = {};
+
+// ════════════════════════════════════════
+// 1. RMI → RMI
+// ════════════════════════════════════════
+FILES['RMI_RMI'] = {
+'InterfaceP1.java':`import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface InterfaceP1 extends Remote {
+    void reception(int S) throws RemoteException;
+}`,
+
+'InterfaceP2.java':`import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface InterfaceP2 extends Remote {
+    void reception(int N) throws RemoteException;
+}`,
+
+'P1.java':`import java.rmi.*;
+import java.rmi.registry.*;
+import java.rmi.server.*;
+import java.util.Scanner;
+
+public class P1 extends UnicastRemoteObject implements InterfaceP1 {
+
+    public P1() throws RemoteException {}
+
+    // ← P2 appelle cette méthode pour renvoyer le résultat
+    @Override
+    public void reception(int S) throws RemoteException {
+        System.out.println("P1 reçu résultat S = " + S);
+    }
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur RMI de P1 (pour que P2 puisse appeler P1) ──
+            P1 obj = new P1();
+            Registry reg1 = LocateRegistry.createRegistry(1097);
+            reg1.rebind("referenceP1", obj);
+            System.out.println("Serveur RMI P1 prêt (port 1097)");
+
+            // ── Lecture de N ──
+            Scanner sc = new Scanner(System.in);
+            System.out.print("Donner N : ");
+            int N = sc.nextInt();
+
+            // ── Envoi RMI vers P2 ──
+            Registry reg2 = LocateRegistry.getRegistry("localhost", 1096);
+            InterfaceP2 p2 = (InterfaceP2) reg2.lookup("referenceP2");
+            p2.reception(N);
+            System.out.println("P1 a envoyé N=" + N + " à P2 via RMI");
+
+        } catch (Exception e) {
+            System.err.println("Erreur P1 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+
+'P2.java':`import java.rmi.*;
+import java.rmi.registry.*;
+import java.rmi.server.*;
+
+public class P2 extends UnicastRemoteObject implements InterfaceP2 {
+
+    public P2() throws RemoteException {}
+
+    // ← P1 appelle cette méthode
+    @Override
+    public void reception(int N) throws RemoteException {
+        System.out.println("P2 reçu N = " + N);
+        int S = N * 2;
+        System.out.println("P2 calcule S = " + S);
+
+        // ── Retour RMI vers P1 ──
+        try {
+            Registry reg = LocateRegistry.getRegistry("localhost", 1097);
+            InterfaceP1 p1 = (InterfaceP1) reg.lookup("referenceP1");
+            p1.reception(S);
+            System.out.println("P2 a renvoyé S=" + S + " à P1 via RMI");
+        } catch (Exception e) {
+            System.err.println("Erreur retour P2→P1 : " + e.getMessage());
+        }
+    }
+
+    public static void main(String[] args) {
+        try {
+            P2 obj = new P2();
+            Registry registry = LocateRegistry.createRegistry(1096);
+            registry.rebind("referenceP2", obj);
+            System.out.println("Serveur RMI P2 prêt (port 1096)");
+            // P2 attend que P1 l'appelle via RMI
+        } catch (Exception e) {
+            System.err.println("Erreur P2 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+};
+
+// ════════════════════════════════════════
+// 2. TCP → TCP
+// ════════════════════════════════════════
+FILES['TCP_TCP'] = {
+'P1.java':`import java.io.*;
+import java.net.*;
+import java.util.Scanner;
+
+public class P1 {
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur TCP de P1 : écoute le retour de P2 ──
+            ServerSocket serverSocket = new ServerSocket(2001);
+            new Thread(() -> {
+                try {
+                    System.out.println("P1 écoute TCP port 2001 (retour de P2)...");
+                    Socket s = serverSocket.accept();
+                    ObjectInputStream in = new ObjectInputStream(s.getInputStream());
+                    int S = Integer.parseInt((String) in.readObject());
+                    System.out.println("P1 reçu résultat S = " + S);
+                    in.close(); s.close();
+                } catch (Exception e) { e.printStackTrace(); }
+            }).start();
+
+            // ── Envoi TCP vers P2 ──
+            Scanner sc = new Scanner(System.in);
+            System.out.print("Donner N : ");
+            int N = sc.nextInt();
+
+            Socket socket = new Socket("localhost", 2002);
+            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+            out.writeObject(Integer.toString(N));
+            out.close(); socket.close();
+            System.out.println("P1 a envoyé N=" + N + " à P2 via TCP");
+
+        } catch (Exception e) {
+            System.err.println("Erreur P1 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+
+'P2.java':`import java.io.*;
+import java.net.*;
+
+public class P2 {
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur TCP de P2 : écoute P1 ──
+            ServerSocket serverSocket = new ServerSocket(2002);
+            System.out.println("P2 écoute TCP port 2002...");
+
+            while (true) {
+                Socket socket = serverSocket.accept();
+                ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+                int N = Integer.parseInt((String) in.readObject());
+                System.out.println("P2 reçu N = " + N);
+                in.close(); socket.close();
+
+                int S = N * 2;
+                System.out.println("P2 calcule S = " + S);
+
+                // ── Retour TCP vers P1 ──
+                Socket retSocket = new Socket("localhost", 2001);
+                ObjectOutputStream out = new ObjectOutputStream(retSocket.getOutputStream());
+                out.writeObject(Integer.toString(S));
+                out.close(); retSocket.close();
+                System.out.println("P2 a renvoyé S=" + S + " à P1 via TCP");
+            }
+
+        } catch (Exception e) {
+            System.err.println("Erreur P2 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+};
+
+// ════════════════════════════════════════
+// 3. UDP → UDP
+// ════════════════════════════════════════
+FILES['UDP_UDP'] = {
+'P1.java':`import java.net.*;
+import java.util.Scanner;
+
+public class P1 {
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur UDP de P1 : écoute le retour de P2 ──
+            DatagramSocket udpServer = new DatagramSocket(2011);
+            new Thread(() -> {
+                try {
+                    System.out.println("P1 écoute UDP port 2011 (retour de P2)...");
+                    byte[] buf = new byte[1024];
+                    DatagramPacket pkt = new DatagramPacket(buf, buf.length);
+                    udpServer.receive(pkt);
+                    int S = Integer.parseInt(new String(pkt.getData(), 0, pkt.getLength()).trim());
+                    System.out.println("P1 reçu résultat S = " + S);
+                } catch (Exception e) { e.printStackTrace(); }
+            }).start();
+
+            // ── Envoi UDP vers P2 ──
+            Scanner sc = new Scanner(System.in);
+            System.out.print("Donner N : ");
+            int N = sc.nextInt();
+
+            DatagramSocket ds = new DatagramSocket();
+            byte[] data = Integer.toString(N).getBytes();
+            InetAddress addr = InetAddress.getByName("localhost");
+            ds.send(new DatagramPacket(data, data.length, addr, 2012));
+            ds.close();
+            System.out.println("P1 a envoyé N=" + N + " à P2 via UDP");
+
+        } catch (Exception e) {
+            System.err.println("Erreur P1 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+
+'P2.java':`import java.net.*;
+
+public class P2 {
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur UDP de P2 : écoute P1 ──
+            DatagramSocket udpServer = new DatagramSocket(2012);
+            System.out.println("P2 écoute UDP port 2012...");
+
+            while (true) {
+                byte[] buf = new byte[1024];
+                DatagramPacket pkt = new DatagramPacket(buf, buf.length);
+                udpServer.receive(pkt);
+                int N = Integer.parseInt(new String(pkt.getData(), 0, pkt.getLength()).trim());
+                System.out.println("P2 reçu N = " + N);
+
+                int S = N * 2;
+                System.out.println("P2 calcule S = " + S);
+
+                // ── Retour UDP vers P1 ──
+                DatagramSocket ds = new DatagramSocket();
+                byte[] data = Integer.toString(S).getBytes();
+                InetAddress addr = InetAddress.getByName("localhost");
+                ds.send(new DatagramPacket(data, data.length, addr, 2011));
+                ds.close();
+                System.out.println("P2 a renvoyé S=" + S + " à P1 via UDP");
+            }
+
+        } catch (Exception e) {
+            System.err.println("Erreur P2 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+};
+
+// ════════════════════════════════════════
+// 4. RMI → TCP
+// ════════════════════════════════════════
+FILES['RMI_TCP'] = {
+'InterfaceP2.java':`import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface InterfaceP2 extends Remote {
+    void reception(int N) throws RemoteException;
+}`,
+
+'P1.java':`import java.io.*;
+import java.net.*;
+import java.rmi.*;
+import java.rmi.registry.*;
+import java.util.Scanner;
+
+public class P1 {
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur TCP de P1 : écoute le retour de P2 ──
+            ServerSocket serverSocket = new ServerSocket(2001);
+            new Thread(() -> {
+                try {
+                    System.out.println("P1 écoute TCP port 2001 (retour de P2)...");
+                    Socket s = serverSocket.accept();
+                    ObjectInputStream in = new ObjectInputStream(s.getInputStream());
+                    int S = Integer.parseInt((String) in.readObject());
+                    System.out.println("P1 reçu résultat S = " + S);
+                    in.close(); s.close();
+                } catch (Exception e) { e.printStackTrace(); }
+            }).start();
+
+            // ── Envoi RMI vers P2 ──
+            Scanner sc = new Scanner(System.in);
+            System.out.print("Donner N : ");
+            int N = sc.nextInt();
+
+            Registry reg = LocateRegistry.getRegistry("localhost", 1096);
+            InterfaceP2 p2 = (InterfaceP2) reg.lookup("referenceP2");
+            p2.reception(N);
+            System.out.println("P1 a envoyé N=" + N + " à P2 via RMI");
+
+        } catch (Exception e) {
+            System.err.println("Erreur P1 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+
+'P2.java':`import java.io.*;
+import java.net.*;
+import java.rmi.*;
+import java.rmi.registry.*;
+import java.rmi.server.*;
+
+public class P2 extends UnicastRemoteObject implements InterfaceP2 {
+
+    public P2() throws RemoteException {}
+
+    // ← P1 appelle cette méthode via RMI
+    @Override
+    public void reception(int N) throws RemoteException {
+        System.out.println("P2 reçu N = " + N);
+        int S = N * 2;
+        System.out.println("P2 calcule S = " + S);
+
+        // ── Retour TCP vers P1 ──
+        try {
+            Socket socket = new Socket("localhost", 2001);
+            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+            out.writeObject(Integer.toString(S));
+            out.close(); socket.close();
+            System.out.println("P2 a renvoyé S=" + S + " à P1 via TCP");
+        } catch (Exception e) {
+            System.err.println("Erreur retour P2→P1 : " + e.getMessage());
+        }
+    }
+
+    public static void main(String[] args) {
+        try {
+            P2 obj = new P2();
+            Registry registry = LocateRegistry.createRegistry(1096);
+            registry.rebind("referenceP2", obj);
+            System.out.println("Serveur RMI P2 prêt (port 1096)");
+        } catch (Exception e) {
+            System.err.println("Erreur P2 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+};
+
+// ════════════════════════════════════════
+// 5. RMI → UDP
+// ════════════════════════════════════════
+FILES['RMI_UDP'] = {
+'InterfaceP2.java':`import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface InterfaceP2 extends Remote {
+    void reception(int N) throws RemoteException;
+}`,
+
+'P1.java':`import java.net.*;
+import java.rmi.*;
+import java.rmi.registry.*;
+import java.util.Scanner;
+
+public class P1 {
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur UDP de P1 : écoute le retour de P2 ──
+            DatagramSocket udpServer = new DatagramSocket(2011);
+            new Thread(() -> {
+                try {
+                    System.out.println("P1 écoute UDP port 2011 (retour de P2)...");
+                    byte[] buf = new byte[1024];
+                    DatagramPacket pkt = new DatagramPacket(buf, buf.length);
+                    udpServer.receive(pkt);
+                    int S = Integer.parseInt(new String(pkt.getData(), 0, pkt.getLength()).trim());
+                    System.out.println("P1 reçu résultat S = " + S);
+                } catch (Exception e) { e.printStackTrace(); }
+            }).start();
+
+            // ── Envoi RMI vers P2 ──
+            Scanner sc = new Scanner(System.in);
+            System.out.print("Donner N : ");
+            int N = sc.nextInt();
+
+            Registry reg = LocateRegistry.getRegistry("localhost", 1096);
+            InterfaceP2 p2 = (InterfaceP2) reg.lookup("referenceP2");
+            p2.reception(N);
+            System.out.println("P1 a envoyé N=" + N + " à P2 via RMI");
+
+        } catch (Exception e) {
+            System.err.println("Erreur P1 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+
+'P2.java':`import java.net.*;
+import java.rmi.*;
+import java.rmi.registry.*;
+import java.rmi.server.*;
+
+public class P2 extends UnicastRemoteObject implements InterfaceP2 {
+
+    public P2() throws RemoteException {}
+
+    // ← P1 appelle cette méthode via RMI
+    @Override
+    public void reception(int N) throws RemoteException {
+        System.out.println("P2 reçu N = " + N);
+        int S = N * 2;
+        System.out.println("P2 calcule S = " + S);
+
+        // ── Retour UDP vers P1 ──
+        try {
+            DatagramSocket ds = new DatagramSocket();
+            byte[] data = Integer.toString(S).getBytes();
+            InetAddress addr = InetAddress.getByName("localhost");
+            ds.send(new DatagramPacket(data, data.length, addr, 2011));
+            ds.close();
+            System.out.println("P2 a renvoyé S=" + S + " à P1 via UDP");
+        } catch (Exception e) {
+            System.err.println("Erreur retour P2→P1 : " + e.getMessage());
+        }
+    }
+
+    public static void main(String[] args) {
+        try {
+            P2 obj = new P2();
+            Registry registry = LocateRegistry.createRegistry(1096);
+            registry.rebind("referenceP2", obj);
+            System.out.println("Serveur RMI P2 prêt (port 1096)");
+        } catch (Exception e) {
+            System.err.println("Erreur P2 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+};
+
+// ════════════════════════════════════════
+// 6. TCP → RMI
+// ════════════════════════════════════════
+FILES['TCP_RMI'] = {
+'InterfaceP1.java':`import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface InterfaceP1 extends Remote {
+    void reception(int S) throws RemoteException;
+}`,
+
+'P1.java':`import java.io.*;
+import java.net.*;
+import java.rmi.*;
+import java.rmi.registry.*;
+import java.rmi.server.*;
+import java.util.Scanner;
+
+public class P1 extends UnicastRemoteObject implements InterfaceP1 {
+
+    public P1() throws RemoteException {}
+
+    // ← P2 appelle cette méthode pour renvoyer le résultat
+    @Override
+    public void reception(int S) throws RemoteException {
+        System.out.println("P1 reçu résultat S = " + S);
+    }
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur RMI de P1 (pour que P2 puisse appeler P1) ──
+            P1 obj = new P1();
+            Registry reg1 = LocateRegistry.createRegistry(1097);
+            reg1.rebind("referenceP1", obj);
+            System.out.println("Serveur RMI P1 prêt (port 1097)");
+
+            // ── Envoi TCP vers P2 ──
+            Scanner sc = new Scanner(System.in);
+            System.out.print("Donner N : ");
+            int N = sc.nextInt();
+
+            Socket socket = new Socket("localhost", 2002);
+            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+            out.writeObject(Integer.toString(N));
+            out.close(); socket.close();
+            System.out.println("P1 a envoyé N=" + N + " à P2 via TCP");
+
+        } catch (Exception e) {
+            System.err.println("Erreur P1 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+
+'P2.java':`import java.io.*;
+import java.net.*;
+import java.rmi.*;
+import java.rmi.registry.*;
+
+public class P2 {
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur TCP de P2 : écoute P1 ──
+            ServerSocket serverSocket = new ServerSocket(2002);
+            System.out.println("P2 écoute TCP port 2002...");
+
+            while (true) {
+                Socket socket = serverSocket.accept();
+                ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+                int N = Integer.parseInt((String) in.readObject());
+                System.out.println("P2 reçu N = " + N);
+                in.close(); socket.close();
+
+                int S = N * 2;
+                System.out.println("P2 calcule S = " + S);
+
+                // ── Retour RMI vers P1 ──
+                try {
+                    Registry reg = LocateRegistry.getRegistry("localhost", 1097);
+                    InterfaceP1 p1 = (InterfaceP1) reg.lookup("referenceP1");
+                    p1.reception(S);
+                    System.out.println("P2 a renvoyé S=" + S + " à P1 via RMI");
+                } catch (Exception e) {
+                    System.err.println("Erreur retour P2→P1 : " + e.getMessage());
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Erreur P2 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+};
+
+// ════════════════════════════════════════
+// 7. TCP → UDP
+// ════════════════════════════════════════
+FILES['TCP_UDP'] = {
+'P1.java':`import java.io.*;
+import java.net.*;
+import java.util.Scanner;
+
+public class P1 {
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur UDP de P1 : écoute le retour de P2 ──
+            DatagramSocket udpServer = new DatagramSocket(2011);
+            new Thread(() -> {
+                try {
+                    System.out.println("P1 écoute UDP port 2011 (retour de P2)...");
+                    byte[] buf = new byte[1024];
+                    DatagramPacket pkt = new DatagramPacket(buf, buf.length);
+                    udpServer.receive(pkt);
+                    int S = Integer.parseInt(new String(pkt.getData(), 0, pkt.getLength()).trim());
+                    System.out.println("P1 reçu résultat S = " + S);
+                } catch (Exception e) { e.printStackTrace(); }
+            }).start();
+
+            // ── Envoi TCP vers P2 ──
+            Scanner sc = new Scanner(System.in);
+            System.out.print("Donner N : ");
+            int N = sc.nextInt();
+
+            Socket socket = new Socket("localhost", 2002);
+            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+            out.writeObject(Integer.toString(N));
+            out.close(); socket.close();
+            System.out.println("P1 a envoyé N=" + N + " à P2 via TCP");
+
+        } catch (Exception e) {
+            System.err.println("Erreur P1 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+
+'P2.java':`import java.io.*;
+import java.net.*;
+
+public class P2 {
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur TCP de P2 : écoute P1 ──
+            ServerSocket serverSocket = new ServerSocket(2002);
+            System.out.println("P2 écoute TCP port 2002...");
+
+            while (true) {
+                Socket socket = serverSocket.accept();
+                ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+                int N = Integer.parseInt((String) in.readObject());
+                System.out.println("P2 reçu N = " + N);
+                in.close(); socket.close();
+
+                int S = N * 2;
+                System.out.println("P2 calcule S = " + S);
+
+                // ── Retour UDP vers P1 ──
+                DatagramSocket ds = new DatagramSocket();
+                byte[] data = Integer.toString(S).getBytes();
+                InetAddress addr = InetAddress.getByName("localhost");
+                ds.send(new DatagramPacket(data, data.length, addr, 2011));
+                ds.close();
+                System.out.println("P2 a renvoyé S=" + S + " à P1 via UDP");
+            }
+
+        } catch (Exception e) {
+            System.err.println("Erreur P2 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+};
+
+// ════════════════════════════════════════
+// 8. UDP → TCP
+// ════════════════════════════════════════
+FILES['UDP_TCP'] = {
+'P1.java':`import java.io.*;
+import java.net.*;
+import java.util.Scanner;
+
+public class P1 {
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur TCP de P1 : écoute le retour de P2 ──
+            ServerSocket serverSocket = new ServerSocket(2001);
+            new Thread(() -> {
+                try {
+                    System.out.println("P1 écoute TCP port 2001 (retour de P2)...");
+                    Socket s = serverSocket.accept();
+                    ObjectInputStream in = new ObjectInputStream(s.getInputStream());
+                    int S = Integer.parseInt((String) in.readObject());
+                    System.out.println("P1 reçu résultat S = " + S);
+                    in.close(); s.close();
+                } catch (Exception e) { e.printStackTrace(); }
+            }).start();
+
+            // ── Envoi UDP vers P2 ──
+            Scanner sc = new Scanner(System.in);
+            System.out.print("Donner N : ");
+            int N = sc.nextInt();
+
+            DatagramSocket ds = new DatagramSocket();
+            byte[] data = Integer.toString(N).getBytes();
+            InetAddress addr = InetAddress.getByName("localhost");
+            ds.send(new DatagramPacket(data, data.length, addr, 2012));
+            ds.close();
+            System.out.println("P1 a envoyé N=" + N + " à P2 via UDP");
+
+        } catch (Exception e) {
+            System.err.println("Erreur P1 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+
+'P2.java':`import java.io.*;
+import java.net.*;
+
+public class P2 {
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur UDP de P2 : écoute P1 ──
+            DatagramSocket udpServer = new DatagramSocket(2012);
+            System.out.println("P2 écoute UDP port 2012...");
+
+            while (true) {
+                byte[] buf = new byte[1024];
+                DatagramPacket pkt = new DatagramPacket(buf, buf.length);
+                udpServer.receive(pkt);
+                int N = Integer.parseInt(new String(pkt.getData(), 0, pkt.getLength()).trim());
+                System.out.println("P2 reçu N = " + N);
+
+                int S = N * 2;
+                System.out.println("P2 calcule S = " + S);
+
+                // ── Retour TCP vers P1 ──
+                Socket retSocket = new Socket("localhost", 2001);
+                ObjectOutputStream out = new ObjectOutputStream(retSocket.getOutputStream());
+                out.writeObject(Integer.toString(S));
+                out.close(); retSocket.close();
+                System.out.println("P2 a renvoyé S=" + S + " à P1 via TCP");
+            }
+
+        } catch (Exception e) {
+            System.err.println("Erreur P2 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+};
+
+// ════════════════════════════════════════
+// 9. UDP → RMI
+// ════════════════════════════════════════
+FILES['UDP_RMI'] = {
+'InterfaceP1.java':`import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+public interface InterfaceP1 extends Remote {
+    void reception(int S) throws RemoteException;
+}`,
+
+'P1.java':`import java.net.*;
+import java.rmi.*;
+import java.rmi.registry.*;
+import java.rmi.server.*;
+import java.util.Scanner;
+
+public class P1 extends UnicastRemoteObject implements InterfaceP1 {
+
+    public P1() throws RemoteException {}
+
+    // ← P2 appelle cette méthode pour renvoyer le résultat
+    @Override
+    public void reception(int S) throws RemoteException {
+        System.out.println("P1 reçu résultat S = " + S);
+    }
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur RMI de P1 (pour que P2 puisse appeler P1) ──
+            P1 obj = new P1();
+            Registry reg1 = LocateRegistry.createRegistry(1097);
+            reg1.rebind("referenceP1", obj);
+            System.out.println("Serveur RMI P1 prêt (port 1097)");
+
+            // ── Envoi UDP vers P2 ──
+            Scanner sc = new Scanner(System.in);
+            System.out.print("Donner N : ");
+            int N = sc.nextInt();
+
+            DatagramSocket ds = new DatagramSocket();
+            byte[] data = Integer.toString(N).getBytes();
+            InetAddress addr = InetAddress.getByName("localhost");
+            ds.send(new DatagramPacket(data, data.length, addr, 2012));
+            ds.close();
+            System.out.println("P1 a envoyé N=" + N + " à P2 via UDP");
+
+        } catch (Exception e) {
+            System.err.println("Erreur P1 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+
+'P2.java':`import java.net.*;
+import java.rmi.*;
+import java.rmi.registry.*;
+
+public class P2 {
+
+    public static void main(String[] args) {
+        try {
+            // ── Serveur UDP de P2 : écoute P1 ──
+            DatagramSocket udpServer = new DatagramSocket(2012);
+            System.out.println("P2 écoute UDP port 2012...");
+
+            while (true) {
+                byte[] buf = new byte[1024];
+                DatagramPacket pkt = new DatagramPacket(buf, buf.length);
+                udpServer.receive(pkt);
+                int N = Integer.parseInt(new String(pkt.getData(), 0, pkt.getLength()).trim());
+                System.out.println("P2 reçu N = " + N);
+
+                int S = N * 2;
+                System.out.println("P2 calcule S = " + S);
+
+                // ── Retour RMI vers P1 ──
+                try {
+                    Registry reg = LocateRegistry.getRegistry("localhost", 1097);
+                    InterfaceP1 p1 = (InterfaceP1) reg.lookup("referenceP1");
+                    p1.reception(S);
+                    System.out.println("P2 a renvoyé S=" + S + " à P1 via RMI");
+                } catch (Exception e) {
+                    System.err.println("Erreur retour P2→P1 : " + e.getMessage());
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Erreur P2 : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}`,
+};
+
+// ══════════════════════════════════════════════════════════════
+//  UI
+// ══════════════════════════════════════════════════════════════
+let currentCombo = 'RMI_RMI';
+let currentFile  = 'P1.java';
+
+const COLORS = {TCP:'var(--tcp)',UDP:'var(--udp)',RMI:'var(--rmi)'};
+const ORDER  = {
+  RMI:'Démarrer P2 (RMI server) puis P1',
+  TCP:'Démarrer P2 (TCP server) puis P1',
+  UDP:'Démarrer P2 (UDP server) puis P1',
+};
+
+function buildComboBar() {
+  const bar = document.getElementById('combo-bar');
+  bar.innerHTML = '';
+  COMBOS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'combo-btn' + (c.id === currentCombo ? ' active' : '');
+    btn.innerHTML =
+      \`<span class="pill \${c.send}">\${c.send}</span>
+       <span style="color:var(--muted);font-size:10px">→ ret →</span>
+       <span class="pill \${c.ret}">\${c.ret}</span>\`;
+    btn.onclick = () => { currentCombo = c.id; currentFile = 'P1.java'; render(); };
+    bar.appendChild(btn);
+  });
+}
+
+function buildDiagram(send, ret) {
+  const d = document.getElementById('diagram');
+  d.innerHTML = \`
+    <div class="proc-box">P1</div>
+    <div class="arrow-wrap">
+      <div class="arrow-line" style="color:\${COLORS[send]}">
+        <span class="pill \${send}">\${send}</span>
+        <span class="arrow-sym">→</span>
+      </div>
+      <div class="arrow-line" style="color:\${COLORS[ret]}">
+        <span class="arrow-sym">←</span>
+        <span class="pill \${ret}">\${ret}</span>
+      </div>
+    </div>
+    <div class="proc-box">P2</div>
+  \`;
+}
+
+function buildFileTabs() {
+  const ft  = document.getElementById('file-tabs');
+  const cpb = document.getElementById('copy-btn');
+  ft.innerHTML = '';
+  ft.appendChild(cpb);
+  const files = FILES[currentCombo];
+  Object.keys(files).forEach(f => {
+    const btn = document.createElement('button');
+    const isIface = f.startsWith('Interface');
+    btn.className = 'file-tab' + (f === currentFile ? (isIface ? ' ai' : ' ap') : '');
+    btn.textContent = f;
+    btn.onclick = () => { currentFile = f; buildFileTabs(); showCode(); };
+    ft.insertBefore(btn, cpb);
+  });
+}
+
+function showCode() {
+  document.getElementById('code-out').textContent =
+    FILES[currentCombo][currentFile] || '// Fichier non disponible';
+}
+
+function copyActive() {
+  const text = FILES[currentCombo][currentFile] || '';
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copié !'; btn.className = 'copy-btn ok';
+    setTimeout(() => { btn.textContent = orig; btn.className = 'copy-btn'; }, 1500);
+  });
+}
+
+function render() {
+  const c = COMBOS.find(x => x.id === currentCombo);
+  buildComboBar();
+  buildDiagram(c.send, c.ret);
+  if (!FILES[currentCombo][currentFile]) currentFile = 'P1.java';
+  buildFileTabs();
+  showCode();
+}
+
+render();
+</script>
+</body>
+</html>
