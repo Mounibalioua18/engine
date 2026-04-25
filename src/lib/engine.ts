@@ -317,9 +317,20 @@ export function generateOfflineEngine(topology: string, roles: string): Record<s
   [...processes].reverse().forEach(p => {
      const pOutEdges = edges.filter((e) => e.from === p);
      const destIPs = Array.from(new Set(pOutEdges.map(e => e.to))).sort();
-     const args = destIPs.map(() => '127.0.0.1').join(' ');
-     readme += `   Terminal pour ${p} : java ${p} ${args}\n`;
+     if (destIPs.length > 0) {
+         const args = destIPs.map(() => 'localhost').join(' ');
+         readme += `   Terminal pour ${p} : java ${p} ${args}\n`;
+     } else {
+         readme += `   Terminal pour ${p} : java ${p}\n`;
+     }
   });
+
+  readme += `\n=== DÉPANNAGE ===\n`;
+  readme += `Si vous obtenez l'erreur "Port already in use" ou "Address already in use" lors du lancement d'un processus RMI (ex: P3), cela signifie que le processus précédent est toujours en cours d'exécution en arrière-plan ou qu'un autre programme utilise déjà ce port.\n\n`;
+  readme += `Pour résoudre cela :\n`;
+  readme += `- Sur Windows : Ouvrez un terminal administrateur et tapez \`taskkill /F /IM java.exe\` pour forcer la fermeture de tous les processus Java.\n`;
+  readme += `- Sur Linux/Mac : Tapez \`killall java\` dans votre terminal.\n`;
+  readme += `Ensuite, relancez vos processus dans l'ordre.\n`;
 
   files['README.md'] = readme;
 
